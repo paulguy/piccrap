@@ -1,5 +1,7 @@
 #include "encode.h"
 
+double blah[5] = {12.5, 30.0, 50.0, 70.0};
+
 /* structure of an encoded frame
  * --- Frame ---
  * 9 vertical sync lines (find approx length of a line)
@@ -62,7 +64,11 @@ int analog_encode(Connection **connection, Surface *surface, int multiplier) {
 					(*connection)->stream[offset] = BLANK_VAL;
 				} else {
 					/*(*connection)->stream[offset] = (255.0 - (double)(surface->luma[(i - SYNC_LINES) * surface->width + (lineoffset / multiplier)])) * (255.0 / (BLACK_VAL - WHITE_VAL)) + WHITE_VAL;*/
-					(*connection)->stream[offset] = (lineoffset/20 % 2)?WHITE_VAL:BLACK_VAL;
+					if(lineoffset < 80) {
+						(*connection)->stream[offset] = BLACK_VAL;
+					} else {
+						(*connection)->stream[offset] = blah[lineoffset/80 % 4];
+					}
 					lineoffset++;
 				}
 				offset++;

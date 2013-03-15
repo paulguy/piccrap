@@ -34,7 +34,7 @@ int main() {
 		outsurface->luma[i] = 0;
 	}
 
-	decodeparams.syncthresh = 1.0;
+	decodeparams.syncthresh = 0.9;
 	decodeparams.fuzzyness = 2;
 	decodeparams.autolevel = 0.9;
 	decodeparams.autostride = 0.9;

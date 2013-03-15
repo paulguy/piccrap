@@ -30,20 +30,19 @@ int analog_decode(Connection *connection, Surface *surface, DecodeParams *params
 */		if(currentline < SYNC_LINES) {
 			switch (syncing) {
 				case SYNC_SYNC:
-					if(connection->stream[i] < synclevel) {
+					if(connection->stream[i] < (synclevel * params->syncthresh)) {
 						if(fuzz == 0) {
 							blanklevel = blanklevel*params->autolevel + connection->stream[i]*invautolevel;
 							syncing = SYNC_BLANK;
 						}
 						fuzz--;
 					} else {
+						synclevel = synclevel*params->autolevel + connection->stream[i]*invautolevel;
 						fuzz = params->fuzzyness;
 					}
-					synclevel = synclevel*params->autolevel + connection->stream[i]*invautolevel;
 					stride++;
 					break;
 				case SYNC_BLANK:
-					blanklevel = blanklevel*params->autolevel + connection->stream[i]*invautolevel;
 					if(connection->stream[i] > (synclevel * params->syncthresh)) {
 						if(fuzz == 0) {
 fprintf(stderr, "%d %f %f %f %f\n", currentline, stride, runningstride, synclevel, blanklevel);
@@ -59,6 +58,7 @@ fprintf(stderr, "%d %f %f %f %f\n", currentline, stride, runningstride, syncleve
 						}
 						fuzz--;
 					} else {
+						blanklevel = blanklevel*params->autolevel + connection->stream[i]*invautolevel;
 						fuzz = params->fuzzyness;
 					}
 					stride++;
@@ -69,7 +69,6 @@ fprintf(stderr, "%d %f %f %f %f\n", currentline, stride, runningstride, syncleve
 		} else {  /* active lines */
 			switch (syncing) {
 				case SYNC_SYNC:
-					synclevel = synclevel*params->autolevel + connection->stream[i]*invautolevel;
 					if(connection->stream[i] < synclevel) {
 						if(fuzz == 0) {
 							blanklevel = blanklevel*params->autolevel + connection->stream[i]*invautolevel;
@@ -77,16 +76,21 @@ fprintf(stderr, "%d %f %f %f %f\n", currentline, stride, runningstride, syncleve
 						}
 						fuzz--;
 					} else {
-						fuzz = params->fuzzyness;
+						synclevel = synclevel*params->autolevel + connection->stream[i]*invautolevel;
+						if(fuzz < params->fuzzyness) {
+							activestart += params->fuzzyness - fuzz;
+							fuzz = params->fuzzyness;
+						}
+						activestart++;
 					}
 					stride++;
-					activestart++;
 					break;
 				case SYNC_BLANK:
 					blanklevel = blanklevel*params->autolevel + connection->stream[i]*invautolevel;
 					if(connection->stream[i] < blanklevel) {
 						if(fuzz == 0) {
 							sampleperiod = (double)(surface->width) / (runningstride - (double)activestart);
+fprintf(stderr, "%d %f ", activestart, sampleperiod);
 							activestart = 0;
 							xpos = 0;
 							xposd = 0.0;
@@ -94,15 +98,19 @@ fprintf(stderr, "%d %f %f %f %f\n", currentline, stride, runningstride, syncleve
 							avgsample = 0;
 							whitelevel = blanklevel * (WHITE_VAL / BLANK_VAL);
 							blacklevel = blanklevel * (BLACK_VAL / BLANK_VAL);
+fprintf(stderr, "%f %f %f\n", blanklevel, blacklevel, whitelevel);
 							fuzz = params->fuzzyness;
 							syncing = SYNC_ACTIVE;
 						}
 						fuzz--;
 					} else {
-						fuzz = params->fuzzyness;
+						if(fuzz < params->fuzzyness) {
+							activestart += params->fuzzyness - fuzz;
+							fuzz = params->fuzzyness;
+						}
+						activestart++;
 					}
 					stride++;
-					activestart++;
 					break;
 				case SYNC_ACTIVE:
 					if(connection->stream[i] > (synclevel * params->syncthresh)) {
@@ -128,11 +136,12 @@ fprintf(stderr, "Line %d ended at %d due to hsync reached.\n", currentline, i);
 						} else if(avgsample > blacklevel) {
 							avgsample = blacklevel;
 						}
-						surface->luma[(currentline - SYNC_LINES) * surface->width + xpos] = (int)(255.0 - ((avgsample / samples) - WHITE_VAL) * (255.0 / (blacklevel - whitelevel)));
+						surface->luma[(currentline - SYNC_LINES) * surface->width + xpos] = (int)(255.0 - ((avgsample / samples) - whitelevel) * (255.0 / (blacklevel - whitelevel)));
+						avgsample = 0;
 						samples = 0;
 						xpos++;
 						if(xpos >= surface->width) {
-fprintf(stderr, "%d %f %f %f %d\n", currentline, stride, runningstride, xposd, xpos);
+fprintf(stderr, "%d %f %f %f %d %f\n", currentline, stride, runningstride, xposd, xpos, synclevel);
 fprintf(stderr, "Ran out of framebuffer on line %d.\n", currentline);
 							syncing = SYNC_END;
 						}
@@ -140,8 +149,7 @@ fprintf(stderr, "Ran out of framebuffer on line %d.\n", currentline);
 					stride++;
 					break;
 				case SYNC_END:
-					blanklevel = blanklevel*params->autolevel + connection->stream[i]*invautolevel;
-					if(connection->stream[i] > synclevel) {
+					if(connection->stream[i] > (synclevel * params->syncthresh)) {
 						if(fuzz == 0) {
 							/*runningstride = runningstride*params->autostride + stride*invautostride;*/
 							stride = 0;
@@ -154,7 +162,6 @@ fprintf(stderr, "Ran out of framebuffer on line %d.\n", currentline);
 					} else {
 						fuzz = params->fuzzyness;
 					}
-					stride++;
 					break;
 			}
 		}
