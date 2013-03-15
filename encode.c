@@ -31,14 +31,8 @@ int analog_encode(Connection **connection, Surface *surface, int multiplier) {
 	int lines = surface->height + SYNC_LINES;
 
 	if(*connection == NULL) {
-		*connection = (Connection *)malloc(sizeof(Connection));
+		*connection = connection_init(stride * lines);
 		if(*connection == NULL) {
-			return(-1);
-		}
-		*connection->length = stride * lines;
-		*connection->stream = (double *)malloc(sizeof(double) * *connection->length);
-		if(*connection->stream == NULL) {
-			free(*connection);
 			return(-1);
 		}
 	}
@@ -49,9 +43,9 @@ int analog_encode(Connection **connection, Surface *surface, int multiplier) {
 		if(i < SYNC_LINES) {
 			for(j = 0; j < stride; j++) {
 				if(j < synclength) {
-					*connection->stream[offset] = SYNC_VAL;
+					(*connection)->stream[offset] = SYNC_VAL;
 				} else {
-					*connection->stream[offset] = BLANK_VAL;
+					(*connection)->stream[offset] = BLANK_VAL;
 				}
 				offset++;
 			}
@@ -60,16 +54,17 @@ int analog_encode(Connection **connection, Surface *surface, int multiplier) {
 			for(j = 0; j < stride; j++) {
 				if(j < totalsynclength) {
 					if(j < synclength) {
-						*connection->stream[offset] = SYNC_VAL;
+						(*connection)->stream[offset] = SYNC_VAL;
 					} else {
-						*connection->stream[offset] = BLANK_VAL;
+						(*connection)->stream[offset] = BLANK_VAL;
 					}
 				} else if (j > backporchstart) {
-					*connection->stream[offset] = BLANK_VAL;
+					(*connection)->stream[offset] = BLANK_VAL;
 				} else {
-					*connection->stream[offset] = ((255.0 - (double)(surface->luma[(i - SYNC_LINES) * surface->width + (lineoffset / multiplier)])) * LUMA_NORM_MUL + WHITE_VAL;
+					/*(*connection)->stream[offset] = (255.0 - (double)(surface->luma[(i - SYNC_LINES) * surface->width + (lineoffset / multiplier)])) * (255.0 / (BLACK_VAL - WHITE_VAL)) + WHITE_VAL;*/
+					(*connection)->stream[offset] = (lineoffset/20 % 2)?WHITE_VAL:BLACK_VAL;
+					lineoffset++;
 				}
-				lineoffset++;
 				offset++;
 			}
 		}

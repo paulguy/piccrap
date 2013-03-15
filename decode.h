@@ -2,6 +2,8 @@
 #include "surface.h"
 #include "signalvalues.h"
 
+#include <stdio.h>
+
 typedef struct {
 	double syncthresh;
 	double blankthresh;
@@ -17,4 +19,4 @@ typedef enum {
 	SYNC_END
 } SyncMode;
 
-int analog_encode(Connection *connection, Surface *surface, DecodeParams *params);
+int analog_decode(Connection *connection, Surface *surface, DecodeParams *params);

@@ -1,3 +1,6 @@
+#ifndef _CONNECTION_H
+#define _CONNECTION_H
+
 #include <stdlib.h>
 
 typedef struct {
@@ -6,3 +9,5 @@ typedef struct {
 } Connection;
 
 Connection *connection_init(int length);
+
+#endif

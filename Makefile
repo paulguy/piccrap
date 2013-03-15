@@ -1,4 +1,4 @@
-OBJS   = connection.o encode.o decode.o main.o
+OBJS   = surface.o connection.o encode.o decode.o main.o
 TARGET = piccrap
 CFLAGS = -pedantic -Wall -Wextra -Werror -std=gnu99
 
